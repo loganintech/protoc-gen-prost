@@ -20,6 +20,32 @@ mod generator;
 
 pub use self::generator::{Error, Generator, GeneratorResultExt, Result};
 
+/// File structure mode for generated code
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FileStructure {
+    /// Generate all code for a package in a single flat file (e.g., `google.protobuf.rs`)
+    Flat,
+    /// Generate code in a nested directory structure (e.g., `google/protobuf.rs`)
+    Nested,
+}
+
+impl Default for FileStructure {
+    fn default() -> Self {
+        Self::Nested
+    }
+}
+
+impl FileStructure {
+    /// Parse a file structure mode from a string
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "flat" => Some(Self::Flat),
+            "nested" => Some(Self::Nested),
+            _ => None,
+        }
+    }
+}
+
 /// Execute the core _Prost!_ generator from an encoded [`CodeGeneratorRequest`]
 pub fn execute(raw_request: &[u8]) -> generator::Result {
     let request = CodeGeneratorRequest::decode(raw_request)?;
@@ -30,6 +56,7 @@ pub fn execute(raw_request: &[u8]) -> generator::Result {
         request.proto_file,
         raw_request,
         params.prost.default_package_filename(),
+        params.prost.file_structure(),
     )?;
     let file_descriptor_set_generator = params
         .file_descriptor_set
@@ -56,6 +83,7 @@ impl ModuleRequestSet {
         proto_file: Vec<FileDescriptorProto>,
         raw_request: &[u8],
         default_package_filename: Option<&str>,
+        file_structure: FileStructure,
     ) -> std::result::Result<Self, prost::DecodeError>
     where
         I: IntoIterator<Item = String>,
@@ -67,6 +95,7 @@ impl ModuleRequestSet {
             proto_file,
             raw_protos,
             default_package_filename.unwrap_or("_"),
+            file_structure,
         ))
     }
 
@@ -75,6 +104,7 @@ impl ModuleRequestSet {
         proto_file: Vec<FileDescriptorProto>,
         raw_protos: RawProtos,
         default_package_filename: &str,
+        file_structure: FileStructure,
     ) -> Self
     where
         I: IntoIterator<Item = String>,
@@ -93,7 +123,15 @@ impl ModuleRequestSet {
                 if entry.output_filename().is_none() && input_protos.contains(proto_filename) {
                     let filename = match proto.package() {
                         "" => default_package_filename.to_owned(),
-                        package => format!("{package}.rs"),
+                        package => match file_structure {
+                            FileStructure::Flat => format!("{package}.rs"),
+                            FileStructure::Nested => {
+                                // Convert package name to nested path
+                                // e.g., "google.protobuf" -> "google/protobuf.rs"
+                                let path = package.replace('.', "/");
+                                format!("{path}.rs")
+                            }
+                        },
                     };
                     entry.with_output_filename(filename);
                 }
@@ -216,6 +254,7 @@ struct ProstParameters {
     bytes: Vec<String>,
     disable_comments: Vec<String>,
     default_package_filename: Option<String>,
+    file_structure: FileStructure,
     extern_path: Vec<(String, String)>,
     type_attribute: Vec<(String, String)>,
     field_attribute: Vec<(String, String)>,
@@ -271,6 +310,10 @@ impl ProstParameters {
         self.default_package_filename.as_deref()
     }
 
+    fn file_structure(&self) -> FileStructure {
+        self.file_structure
+    }
+
     fn try_handle_parameter<'a>(&mut self, param: Param<'a>) -> std::result::Result<(), Param<'a>> {
         match param {
             Param::Value {
@@ -288,6 +331,16 @@ impl ProstParameters {
                 param: "default_package_filename",
                 ..
             } => self.default_package_filename = param.value().map(|s| s.into_owned()),
+            Param::Value {
+                param: "file_structure",
+                value,
+            } => {
+                self.file_structure = FileStructure::from_str(value)
+                    .ok_or_else(|| Param::Value {
+                        param: "file_structure",
+                        value,
+                    })?;
+            }
             Param::Parameter {
                 param: "compile_well_known_types",
             }

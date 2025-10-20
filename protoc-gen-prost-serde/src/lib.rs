@@ -4,7 +4,7 @@ use std::str;
 
 use prost::Message;
 use prost_types::compiler::CodeGeneratorRequest;
-use protoc_gen_prost::{Generator, InvalidParameter, ModuleRequestSet, Param, Params};
+use protoc_gen_prost::{FileStructure, Generator, InvalidParameter, ModuleRequestSet, Param, Params};
 
 use self::generator::PbJsonGenerator;
 
@@ -25,6 +25,7 @@ pub fn execute(raw_request: &[u8]) -> protoc_gen_prost::Result {
         request.proto_file,
         raw_request,
         params.default_package_filename.as_deref(),
+        params.file_structure,
     )?;
 
     let files = PbJsonGenerator::new(builder, !params.no_include).generate(&module_request_set)?;
@@ -35,9 +36,10 @@ pub fn execute(raw_request: &[u8]) -> protoc_gen_prost::Result {
 /// Parameters use to configure [`Generator`]s built into `protoc-gen-prost-serde`
 ///
 /// [`Generator`]: protoc_gen_prost::generators::Generator
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct Parameters {
     default_package_filename: Option<String>,
+    file_structure: FileStructure,
     extern_path: Vec<(String, String)>,
     retain_enum_prefix: bool,
     preserve_proto_field_names: bool,
@@ -46,6 +48,23 @@ struct Parameters {
     use_integers_for_enums: bool,
     no_include: bool,
     btree_map: Vec<String>,
+}
+
+impl Default for Parameters {
+    fn default() -> Self {
+        Self {
+            default_package_filename: None,
+            file_structure: FileStructure::Nested,
+            extern_path: Vec::new(),
+            retain_enum_prefix: false,
+            preserve_proto_field_names: false,
+            ignore_unknown_fields: false,
+            emit_fields: false,
+            use_integers_for_enums: false,
+            no_include: false,
+            btree_map: Vec::new(),
+        }
+    }
 }
 
 impl Parameters {
@@ -99,6 +118,13 @@ impl str::FromStr for Parameters {
                     param: "default_package_filename",
                     ..
                 } => ret_val.default_package_filename = param.value().map(|s| s.into_owned()),
+                Param::Value {
+                    param: "file_structure",
+                    value,
+                } => {
+                    ret_val.file_structure = FileStructure::from_str(value)
+                        .ok_or_else(|| InvalidParameter::new(format!("invalid file_structure value: {}", value)))?;
+                }
                 Param::Parameter {
                     param: "retain_enum_prefix",
                 }

@@ -21,7 +21,11 @@ impl Generator for PbJsonGenerator {
                     &Module::from_protobuf_package_name(&package.to_string().replace("r#", "")),
                 )?;
 
-                let output_filename = format!("{}.serde.rs", request.proto_package_name());
+                // Derive serde filename from the base output filename to support both flat and nested structures
+                let output_filename = request
+                    .output_filename()
+                    .map(|base| base.replace(".rs", ".serde.rs"))
+                    .unwrap_or_else(|| format!("{}.serde.rs", request.proto_package_name()));
 
                 let mut res = Vec::with_capacity(2);
 

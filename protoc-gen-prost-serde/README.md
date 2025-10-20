@@ -44,6 +44,12 @@ from that crate:
 
 In addition, the following options can also be specified:
 
+* `file_structure=<flat|nested>`: Controls the directory structure of generated files.
+  Should match the setting used for `protoc-gen-prost`.
+  - `flat`: Generates all code for a package in a single file with dots in the name
+    (e.g., `google.protobuf.serde.rs`)
+  - `nested` (default): Generates code in a nested directory structure matching the package hierarchy
+    (e.g., `google/protobuf.serde.rs`)
 * `no_include(=<boolean>)`:  Skips adding an include into the file generated
   by `protoc-gen-prost`. This behavior may be desired if this plugin is run
   in a separate `protoc` invocation and you encounter a `Tried to insert into

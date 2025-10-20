@@ -4,7 +4,7 @@ use std::str;
 
 use prost::Message;
 use prost_types::compiler::CodeGeneratorRequest;
-use protoc_gen_prost::{Generator, InvalidParameter, ModuleRequestSet, Param, Params};
+use protoc_gen_prost::{FileStructure, Generator, InvalidParameter, ModuleRequestSet, Param, Params};
 use tonic_build::Attributes;
 
 use self::{generator::TonicGenerator, resolver::Resolver};
@@ -23,6 +23,7 @@ pub fn execute(raw_request: &[u8]) -> protoc_gen_prost::Result {
         request.proto_file,
         raw_request,
         params.default_package_filename.as_deref(),
+        params.file_structure,
     )?;
 
     let resolver = Resolver::new(params.extern_path, params.compile_well_known_types);
@@ -45,9 +46,10 @@ pub fn execute(raw_request: &[u8]) -> protoc_gen_prost::Result {
 /// Parameters use to configure [`Generator`]s built into `protoc-gen-prost-serde`
 ///
 /// [`Generator`]: protoc_gen_prost::generators::Generator
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct Parameters {
     default_package_filename: Option<String>,
+    file_structure: FileStructure,
     extern_path: Vec<(String, String)>,
     server_attributes: Attributes,
     client_attributes: Attributes,
@@ -57,6 +59,24 @@ struct Parameters {
     no_client: bool,
     no_transport: bool,
     no_include: bool,
+}
+
+impl Default for Parameters {
+    fn default() -> Self {
+        Self {
+            default_package_filename: None,
+            file_structure: FileStructure::Nested,
+            extern_path: Vec::new(),
+            server_attributes: Attributes::default(),
+            client_attributes: Attributes::default(),
+            compile_well_known_types: false,
+            disable_package_emission: false,
+            no_server: false,
+            no_client: false,
+            no_transport: false,
+            no_include: false,
+        }
+    }
 }
 
 impl str::FromStr for Parameters {
@@ -72,6 +92,13 @@ impl str::FromStr for Parameters {
                     param: "default_package_filename",
                     ..
                 } => ret_val.default_package_filename = param.value().map(|s| s.to_string()),
+                Param::Value {
+                    param: "file_structure",
+                    value,
+                } => {
+                    ret_val.file_structure = FileStructure::from_str(value)
+                        .ok_or_else(|| InvalidParameter::new(format!("invalid file_structure value: {}", value)))?;
+                }
                 Param::KeyValue {
                     param: "extern_path",
                     key: prefix,

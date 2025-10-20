@@ -43,6 +43,11 @@ from that crate:
 
 In addition, the following options can also be specified:
 
+* `file_structure=<flat|nested>`: Controls the directory structure of generated files.
+  - `flat`: Generates all code for a package in a single file with dots in the name
+    (e.g., `google.protobuf.rs`)
+  - `nested` (default): Generates code in a nested directory structure matching the package hierarchy
+    (e.g., `google/protobuf.rs`)
 * `file_descriptor_set(=<boolean>)`: Includes the encoded `FileDescriptorSet`
   in the generated output for each module. Note that this behavior is
   different from `prost-build` in that each module only includes the
@@ -121,8 +126,11 @@ When building output, `protoc-gen-prost` adds insertion points inside modules
 to make it easy to add more trait implementations. These insertion points
 are placed in each module and in the include file, if one was generated.
 Output module files are named based on the untransformed protobuf package
-name. Thus a package named `helloworld.abstract.v1` will have an output
-filename of `helloworld.abstract.v1.rs`.
+name. The filename format depends on the `file_structure` option:
+* `file_structure=flat`: A package named `helloworld.abstract.v1` will
+  have an output filename of `helloworld.abstract.v1.rs`
+* `file_structure=nested` (default): A package named `helloworld.abstract.v1` will have
+  an output filename of `helloworld/abstract/v1.rs`
 
 Within module files (`<proto_package>.rs`):
 

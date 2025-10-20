@@ -4,7 +4,7 @@ use std::{rc::Rc, str};
 
 use prost::Message;
 use prost_types::compiler::CodeGeneratorRequest;
-use protoc_gen_prost::{Generator, InvalidParameter, ModuleRequestSet, Param, Params, Result};
+use protoc_gen_prost::{FileStructure, Generator, InvalidParameter, ModuleRequestSet, Param, Params, Result};
 
 use self::generator::{CargoCrateGenerator, IncludeFileGenerator};
 use crate::generator::FeaturesGenerator;
@@ -21,6 +21,7 @@ pub fn execute(raw_request: &[u8]) -> Result {
         request.proto_file,
         raw_request,
         params.default_package_filename.as_deref(),
+        FileStructure::default(),
     )?;
 
     let include_filename = if params.gen_crate.is_some() {

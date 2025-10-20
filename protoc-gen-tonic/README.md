@@ -44,6 +44,12 @@ see the related documentation from `tonic-build`:
 
 In addition, the following options can also be specified:
 
+* `file_structure=<flat|nested>`: Controls the directory structure of generated files.
+  Should match the setting used for `protoc-gen-prost`.
+  - `flat`: Generates all code for a package in a single file with dots in the name
+    (e.g., `google.protobuf.tonic.rs`)
+  - `nested` (default): Generates code in a nested directory structure matching the package hierarchy
+    (e.g., `google/protobuf.tonic.rs`)
 * `no_server(=<boolean>)`: Disables generation of the server modules
 * `no_client(=<boolean>)`: Disables generation of the client modules
 * `no_transport(=<boolean>)`: Disables generation of connect method using `tonic::transport::Channel`

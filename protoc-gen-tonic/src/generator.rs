@@ -130,7 +130,11 @@ impl TonicGenerator {
     fn handle_module_request(&self, module: &Module, request: &ModuleRequest) -> Option<Vec<File>> {
         const PROTO_PATH: &str = "super";
 
-        let output_filename = format!("{}.tonic.rs", request.proto_package_name());
+        // Derive tonic filename from the base output filename to support both flat and nested structures
+        let output_filename = request
+            .output_filename()
+            .map(|base| base.replace(".rs", ".tonic.rs"))
+            .unwrap_or_else(|| format!("{}.tonic.rs", request.proto_package_name()));
 
         let services = request
             .files()
